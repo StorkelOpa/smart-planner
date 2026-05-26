@@ -1,0 +1,15 @@
+# Large MStR data exports
+Gesamtdatenexport_20240101_23.1*
+
+# Geographic raw data zip & folder
+data/vg250_2023/
+data/vg250_2023.zip
+
+# R environment & history files
+.Rhistory
+.RData
+.Rproj.user/
+.Ruserdata/
+
+# Logs
+*.log
