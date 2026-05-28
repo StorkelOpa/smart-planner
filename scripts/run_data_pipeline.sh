@@ -35,8 +35,23 @@ echo "--- STEP 5: Fetching INKAR variables & creating catalog ---"
 Rscript scripts/01_fetch_inkar_variables.R
 echo ""
 
+echo "--- STEP 6: Merging Data Sources (MaStR, INKAR, BKG) ---"
+Rscript scripts/04_merge_data.R
+echo ""
+
+echo "--- STEP 7: Fitting Regression Models & Diagnostics ---"
+Rscript scripts/05_model_regression.R
+echo ""
+
+echo "--- STEP 8: Generating Scientific Plots for Report ---"
+Rscript scripts/06_generate_plots.R
+echo ""
+
 echo "========================================================"
-echo "SUCCESS: Data pipeline completed!"
+echo "SUCCESS: Full data pipeline completed!"
 echo "Parsed wind data, aggregated capacity, downloaded county shapes,"
-echo "and saved INKAR metadata catalog in the 'data/' directory."
+echo "saved INKAR metadata, merged all data, executed regression"
+echo "diagnostics, and generated report plots in 'plots/'."
+echo "You can now launch the dashboard using 'shiny::runApp()'."
 echo "========================================================"
+

@@ -13,3 +13,17 @@ data/vg250_2023.zip
 
 # Logs
 *.log
+
+# Generated data files (recreated by running scripts/run_data_pipeline.sh)
+data/wind_turbines.csv
+data/wind_capacity_by_county.csv
+data/data_metadata_inkar.csv
+data/smart_planner_final_data.csv
+data/smart_planner_final_data.gpkg
+data/smart_planner_final_data_with_residuals.csv
+data/smart_planner_final_data_with_residuals.gpkg
+data/model_results.RData
+
+# Generated scientific plots
+plots/
+
