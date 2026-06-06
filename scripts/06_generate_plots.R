@@ -129,21 +129,33 @@ ggsave("plots/03_economic_structure.png", p3, width = 7, height = 5, dpi = 300)
 # PLOT 4: Einfluss der Kontrollvariablen (Faceted Scatterplots)
 # ==============================================================================
 cat("Generating Plot 4: Faceted Control Variables...\n")
+# Windgeschwindigkeit (Windpotenzial) als erste Facette: im multivariaten Modell
+# der staerkste Einflussfaktor und daher fuer den Bericht zentral.
 df_long <- df_plot %>%
   mutate(Log10_Einwohnerdichte = log10(Einwohnerdichte)) %>%
-  select(Wind_Density_kW_km2, Log10_Einwohnerdichte, Waldflaeche_Prozent, Landwirtschaft_Prozent) %>%
+  select(Wind_Density_kW_km2, Windgeschwindigkeit_ms, Log10_Einwohnerdichte,
+         Waldflaeche_Prozent, Landwirtschaft_Prozent) %>%
   pivot_longer(
-    cols = c(Log10_Einwohnerdichte, Waldflaeche_Prozent, Landwirtschaft_Prozent),
+    cols = c(Windgeschwindigkeit_ms, Log10_Einwohnerdichte,
+             Waldflaeche_Prozent, Landwirtschaft_Prozent),
     names_to = "Variable",
     values_to = "Wert"
   ) %>%
   mutate(
     Variable_Clean = case_when(
+      Variable == "Windgeschwindigkeit_ms" ~ "Ø Windgeschwindigkeit (m/s, 150 m)",
       Variable == "Log10_Einwohnerdichte" ~ "Einwohnerdichte (log10, Ew./km²)",
       Variable == "Waldflaeche_Prozent" ~ "Waldflächenanteil (%)",
       Variable == "Landwirtschaft_Prozent" ~ "Landwirtschaftsanteil (%)",
       TRUE ~ Variable
-    )
+    ),
+    # Reihenfolge der Facetten festlegen (Windpotenzial zuerst)
+    Variable_Clean = factor(Variable_Clean, levels = c(
+      "Ø Windgeschwindigkeit (m/s, 150 m)",
+      "Einwohnerdichte (log10, Ew./km²)",
+      "Waldflächenanteil (%)",
+      "Landwirtschaftsanteil (%)"
+    ))
   )
 
 p4 <- ggplot(df_long, aes(x = Wert, y = Wind_Density_kW_km2)) +
@@ -159,7 +171,7 @@ p4 <- ggplot(df_long, aes(x = Wert, y = Wind_Density_kW_km2)) +
   ) +
   theme_report()
 
-ggsave("plots/04_control_variables.png", p4, width = 8.5, height = 4.5, dpi = 300)
+ggsave("plots/04_control_variables.png", p4, width = 8.5, height = 7, dpi = 300)
 
 # ==============================================================================
 # PLOT 5: Die größten Abweichungen (Residuen-Bar-Chart)

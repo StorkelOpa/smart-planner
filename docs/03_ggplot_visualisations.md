@@ -32,7 +32,7 @@ p1 <- ggplot(df_plot, aes(x = Steuerkraft, y = Wind_Density_kW_km2)) +
   theme_report()
 ```
 * **Interpretation für den Bericht:** 
-  *"Der Scatterplot verdeutlicht die negative Neigung der OLS-Regressionsgeraden. Dies stützt die These, dass eine höhere steuerliche Einnahmenkraft auf kommunaler Ebene mit einer geringeren installierten Windkapazität pro Quadratkilometer einhergeht. Die nicht-lineare LOESS-Kurve offenbart zudem, dass der negative Zusammenhang insbesondere im mittleren Einnahmenbereich stark ausgeprägt ist, während er bei extrem einkommensstarken Kreisen abflacht."*
+  *"Der Scatterplot zeigt eine **bivariate** negative Neigung der OLS-Regressionsgeraden: Rein optisch geht eine höhere steuerliche Einnahmenkraft mit einer geringeren installierten Windkapazität pro Quadratkilometer einher. Dieser Eindruck täuscht jedoch über die Kausalstruktur hinweg: Im **multivariaten Modell** (mit dem Windpotenzial als Kontrollvariable, vgl. [02_statistical_modeling.md](file:///home/carl/Code_Projekte/Smart%20Planner/docs/02_statistical_modeling.md)) ist der Steuerkraft-Effekt **nicht mehr signifikant** ($p = 0.73$). Der bivariate Trend entsteht vor allem dadurch, dass die windreichen Kreise des norddeutschen Tieflands zugleich finanzschwächer sind (Omitted-Variable-Bias). Die Grafik eignet sich daher gut, um den Unterschied zwischen einfacher Korrelation und kontrolliertem Effekt zu illustrieren."*
 
 ---
 
