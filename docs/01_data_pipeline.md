@@ -27,7 +27,17 @@ Verwendet wird das Produkt **Verwaltungsgebiete 1:250 000 (VG250-EW)** mit Einwo
 2. **Einwohnerdichte (Kennziffer 320):** Einwohner je km² Landfläche (demografische Kontrollvariable $x_2$).
 3. **Waldfläche (Kennziffer 264):** Flächenanteil des Waldes an der Gesamtfläche in % (geografische Kontrollvariable $x_3$).
 4. **Landwirtschaftsfläche (Kennziffer 261):** Flächenanteil der landwirtschaftlichen Nutzung in % (geografische Kontrollvariable $x_4$).
-5. **Wirtschaftsstruktur (Kennziffern 103, 104, 105):** Anteile der sozialversicherungspflichtig Beschäftigten am Arbeitsort in den Wirtschaftssektoren (Primär/Landwirtschaft, Sekundär/Industrie, Tertiär/Dienstleistungen) in % (Wirtschaftliche Kontrollvariablen $x_5, x_6$).
+5. **Siedlungs- und Verkehrsfläche (Kennziffer 255)** sowie **Wasserfläche (Kennziffer 265):** Flächenanteile in %. Sie dienen zusammen mit Wald und Landwirtschaft der vollständigen **Flächennutzungs-Darstellung** (Donut) im Dashboard; die Restkategorie `Sonstige_Prozent` wird als Differenz zu 100 % gebildet.
+6. **Wirtschaftsstruktur (Kennziffern 103, 104, 105):** Anteile der sozialversicherungspflichtig Beschäftigten am Arbeitsort in den Wirtschaftssektoren (Primär/Landwirtschaft, Sekundär/Industrie, Tertiär/Dienstleistungen) in % (Wirtschaftliche Kontrollvariablen $x_5, x_6$).
+
+### D. Windpotenzial (Global Wind Atlas v4)
+Das Windpotenzial je Kreis wird als **mittlere Windgeschwindigkeit (m/s)** aus dem Global Wind Atlas erschlossen ([02b_get_wind_speed.R](file:///home/carl/Code_Projekte/Smart%20Planner/scripts/02b_get_wind_speed.R)):
+* Länder-GeoTIFF für Deutschland (mittlere Windgeschwindigkeit auf **150 m** Nabenhöhe) wird vom GWA-API heruntergeladen und lokal gecached.
+* Per **zonaler Statistik** (`terra::extract(fun = mean)`) wird je Kreis-Polygon der Mittelwert der Rasterzellen berechnet → Spalte `Windgeschwindigkeit_ms`.
+* Doppelter Nutzen: Dashboard-Kennzahl **und** bisher fehlende Kontrollvariable im Regressionsmodell ([05_model_regression.R](file:///home/carl/Code_Projekte/Smart%20Planner/scripts/05_model_regression.R)).
+
+### E. Zeitreihe des Windausbaus
+Aus den einzelnen Anlagen (`Inbetriebnahmedatum`) wird in [07_build_wind_timeseries.R](file:///home/carl/Code_Projekte/Smart%20Planner/scripts/07_build_wind_timeseries.R) je Kreis und Jahr die **kumulierte** installierte Leistung berechnet (`data/wind_timeseries_by_county.csv`), zusätzlich eine bundesweite Vergleichslinie (`AGS = "DE"`). Hinweis: Da der MaStR-Auszug überwiegend aktive Anlagen enthält, sind sehr frühe Jahre leicht untererfasst (Trend bleibt valide).
 
 ---
 

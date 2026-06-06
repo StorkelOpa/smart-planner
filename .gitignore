@@ -5,6 +5,9 @@ Gesamtdatenexport_20240101_23.1*
 data/vg250_2023/
 data/vg250_2023.zip
 
+# Global Wind Atlas raster cache (re-downloaded by scripts/02b_get_wind_speed.R)
+data/wind_atlas/
+
 # R environment & history files
 .Rhistory
 .RData

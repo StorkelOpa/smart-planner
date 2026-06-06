@@ -31,16 +31,24 @@ echo "--- STEP 4: Downloading & Preparing BKG Geodata ---"
 Rscript scripts/02_get_geodata.R
 echo ""
 
+echo "--- STEP 4b: Wind speed per county from Global Wind Atlas (WS3) ---"
+Rscript scripts/02b_get_wind_speed.R
+echo ""
+
 echo "--- STEP 5: Fetching INKAR variables & creating catalog ---"
 Rscript scripts/01_fetch_inkar_variables.R
 echo ""
 
-echo "--- STEP 6: Merging Data Sources (MaStR, INKAR, BKG) ---"
+echo "--- STEP 6: Merging Data Sources (MaStR, INKAR, BKG, Wind Atlas) ---"
 Rscript scripts/04_merge_data.R
 echo ""
 
 echo "--- STEP 7: Fitting Regression Models & Diagnostics ---"
 Rscript scripts/05_model_regression.R
+echo ""
+
+echo "--- STEP 7b: Building wind expansion time series per county (WS1) ---"
+Rscript scripts/07_build_wind_timeseries.R
 echo ""
 
 echo "--- STEP 8: Generating Scientific Plots for Report ---"

@@ -264,9 +264,10 @@ ui <- page_navbar(
         tableOutput("coeff_table"),
         markdown("
         **Interpretation der Koeffizienten:**
-        * **Steuereinnahmekraft:** Signifikanter **negativer** Koeffizient (p = 0.0121). Finanzstärkere Kommunen bauen im Schnitt weniger Windkraft aus.
-        * **Einwohnerdichte & Waldfläche:** Starker negativer Einfluss (p < 0.001). Sie sind die primären räumlichen Restriktionen.
-        * **VIF:** Keine kritische Multikollinearität für die Hauptvariable Steuerkraft (VIF = 1.26).
+        * **Ø Windgeschwindigkeit:** Mit Abstand stärkster Faktor und hochsignifikant (p < 0.001; standardisierter Effekt +0.46). Das physische Windpotenzial erklärt den Ausbau am besten.
+        * **Steuereinnahmekraft:** Nach Kontrolle des Windpotenzials **nicht mehr signifikant** (p = 0.73; Effekt ≈ 0). Der zuvor sichtbare negative Zusammenhang war weitgehend ein Scheinzusammenhang (Omitted-Variable-Bias: windreiche Nordkreise sind zugleich finanzschwächer).
+        * **Einwohnerdichte & Waldfläche:** Weiterhin signifikant negativ (p < 0.05) – die primären räumlichen Restriktionen.
+        * **VIF:** Keine kritische Multikollinearität für Steuerkraft (VIF = 1.44) oder Windgeschwindigkeit (VIF = 1.90).
         ")
       ),
       card(
@@ -569,15 +570,16 @@ server <- function(input, output, session) {
       input$selected_plot,
       "1" = markdown("
       **Wissenschaftliche Interpretation:**
-      * Die blaue **durchgezogene OLS-Gerade** verdeutlicht einen statistisch signifikanten negativen Zusammenhang. Mit steigender Steuerkraft einer Kommune sinkt die Windkraftdichte.
-      * Die grüne **gestrichelte LOESS-Kurve** zeigt lokale Trends: Der negative Effekt ist vor allem bei mittleren Steuerstärken ausgeprägt, flacht aber im extrem wohlhabenden Bereich ab.
-      * *Nutzen für Ihren Bericht:* Sie können diese Grafik heranziehen, um zu belegen, dass reichere Kommunen weniger Flächen für den Ausbau bereitstellen.
+      * Die blaue **durchgezogene OLS-Gerade** zeigt einen **bivariaten** (unkontrollierten) negativen Zusammenhang: rein optisch bauen finanzstärkere Kommunen weniger aus.
+      * **Achtung – Scheinzusammenhang:** Im multivariaten Modell (mit Windpotenzial als Kontrollvariable) ist dieser Effekt **nicht signifikant** (p = 0.73). Der bivariate Trend entsteht vor allem dadurch, dass windreiche Nordkreise zugleich finanzschwächer sind.
+      * Die grüne **gestrichelte LOESS-Kurve** zeigt lokale Abweichungen vom linearen Trend.
+      * *Nutzen für Ihren Bericht:* Eignet sich, um den Unterschied zwischen bivariater Korrelation und kontrolliertem Effekt herauszuarbeiten.
       "),
       "2" = markdown("
       **Wissenschaftliche Interpretation:**
-      * Die Quartilsdarstellung gruppiert die Landkreise nach ihrer Finanzkraft. Medianwerte (schwarzer Querstrich im Boxplot) sinken von Q1 (finanzschwach) zu Q4 (finanzstark) stetig.
-      * Das zeigt, dass das Muster robust ist und nicht durch wenige Ausreißer getrieben wird.
-      * *Nutzen für Ihren Bericht:* Verdeutlicht die ungleiche Verteilung der Lasten des Ausbaus zulasten finanzschwächerer, ländlicherer Regionen.
+      * Die Quartilsdarstellung gruppiert die Landkreise nach ihrer Finanzkraft. Die Medianwerte sinken von Q1 (finanzschwach) zu Q4 (finanzstark) – ein **bivariates** Muster.
+      * Es ist robust gegenüber einzelnen Ausreißern, **erklärt sich aber großteils über das Windpotenzial**: finanzschwächere Q1-Kreise liegen häufiger in windreichen Regionen.
+      * *Nutzen für Ihren Bericht:* Zeigt das Rohmuster, das im kontrollierten Modell (Modell-Tab) relativiert wird.
       "),
       "3" = markdown("
       **Wissenschaftliche Interpretation:**
@@ -635,6 +637,7 @@ server <- function(input, output, session) {
         Clean_Var = case_when(
           Variable == "Steuerkraft" ~ "Steuereinnahmekraft",
           Variable == "Einwohnerdichte" ~ "Einwohnerdichte",
+          Variable == "Windgeschwindigkeit_ms" ~ "Ø Windgeschwindigkeit",
           Variable == "Waldflaeche_Prozent" ~ "Flächenanteil Wald",
           Variable == "Landwirtschaft_Prozent" ~ "Flächenanteil Landwirtschaft",
           Variable == "Beschaeftigte_Sekundar" ~ "Anteil Beschäftigte Industrie",
@@ -656,9 +659,11 @@ server <- function(input, output, session) {
   })
   
   output$coeff_table <- renderTable({
+    # Reihenfolge muss der Modellformel in 05_model_regression.R entsprechen,
+    # da die Koeffizienten positionsbasiert aus coef_raw/coef_std uebernommen werden.
     tibble(
-      Variable = c("Steuereinnahmekraft (€/Ew.)", "Einwohnerdichte (Ew./km²)", "Waldflächenanteil (%)", "Landwirtschaftsanteil (%)", "Industriebeschäftigte (%)", "Landwirtschaftsbeschäftigte (%)"),
-      VIF = c(vif_values["Steuerkraft"], vif_values["Einwohnerdichte"], vif_values["Waldflaeche_Prozent"], vif_values["Landwirtschaft_Prozent"], vif_values["Beschaeftigte_Sekundar"], vif_values["Beschaeftigte_Primar"]),
+      Variable = c("Steuereinnahmekraft (€/Ew.)", "Einwohnerdichte (Ew./km²)", "Ø Windgeschwindigkeit (m/s)", "Waldflächenanteil (%)", "Landwirtschaftsanteil (%)", "Industriebeschäftigte (%)", "Landwirtschaftsbeschäftigte (%)"),
+      VIF = c(vif_values["Steuerkraft"], vif_values["Einwohnerdichte"], vif_values["Windgeschwindigkeit_ms"], vif_values["Waldflaeche_Prozent"], vif_values["Landwirtschaft_Prozent"], vif_values["Beschaeftigte_Sekundar"], vif_values["Beschaeftigte_Primar"]),
       `Koeffizient (Roh)` = coef_raw$Estimate,
       `p-Wert (Roh)` = coef_raw$`Pr(>|t|)`,
       `Koeffizient (Standardisiert)` = coef_std$Estimate,

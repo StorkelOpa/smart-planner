@@ -28,12 +28,14 @@ df_regression <- districts_sf %>%
 cat("\nFitting OLS regression model (raw data)...\n")
 
 # Model formula: Target is Wind_Density_kW_km2
-# Predictors: Steuerkraft (finance), Einwohnerdichte (density), 
+# Predictors: Steuerkraft (finance), Einwohnerdichte (density),
+# Windgeschwindigkeit_ms (Windpotenzial, NEU/WS3 - Kontrollvariable),
 # Waldflaeche_Prozent, Landwirtschaft_Prozent (geographic/land use),
 # Beschaeftigte_Sekundar, Beschaeftigte_Primar (employment structure).
 # (Beschaeftigte_Tertiar is omitted to avoid perfect multicollinearity)
-model_formula <- Wind_Density_kW_km2 ~ Steuerkraft + Einwohnerdichte + 
-  Waldflaeche_Prozent + Landwirtschaft_Prozent + 
+model_formula <- Wind_Density_kW_km2 ~ Steuerkraft + Einwohnerdichte +
+  Windgeschwindigkeit_ms +
+  Waldflaeche_Prozent + Landwirtschaft_Prozent +
   Beschaeftigte_Sekundar + Beschaeftigte_Primar
 
 model_raw <- lm(model_formula, data = df_regression)
@@ -45,8 +47,9 @@ print(summary(model_raw))
 cat("\nFitting standardized OLS regression model (Z-scores)...\n")
 
 df_scaled <- df_regression %>%
-  select(Wind_Density_kW_km2, Steuerkraft, Einwohnerdichte, 
-         Waldflaeche_Prozent, Landwirtschaft_Prozent, 
+  select(Wind_Density_kW_km2, Steuerkraft, Einwohnerdichte,
+         Windgeschwindigkeit_ms,
+         Waldflaeche_Prozent, Landwirtschaft_Prozent,
          Beschaeftigte_Sekundar, Beschaeftigte_Primar) %>%
   mutate(across(everything(), ~ as.vector(scale(.))))
 
