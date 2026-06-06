@@ -52,6 +52,21 @@ districts_sf <- st_read("data/smart_planner_final_data_with_residuals.gpkg") %>%
 cat("Loading regression model statistics...\n")
 load("data/model_results.RData")
 
+# Load wind expansion time series (WS1) for the Kreis profile line chart.
+# Contains cumulative installed capacity per county and year, plus a national
+# comparison row (AGS == "DE").
+cat("Loading wind expansion time series...\n")
+wind_ts <- readr::read_csv(
+  "data/wind_timeseries_by_county.csv",
+  col_types = readr::cols(
+    AGS = readr::col_character(),
+    Jahr = readr::col_integer(),
+    Anlagen_kumuliert = readr::col_integer(),
+    Nettoleistung_kW_kumuliert = readr::col_double(),
+    Wind_Density_kW_km2_kumuliert = readr::col_double()
+  )
+)
+
 # Extract coefficients and confidence intervals manually to avoid broom dependency
 coef_raw <- as.data.frame(summary(model_raw)$coefficients)
 conf_raw <- confint(model_raw)
@@ -67,26 +82,26 @@ coef_std$Lower <- conf_std[, 1]
 coef_std$Upper <- conf_std[, 2]
 coef_std <- coef_std %>% filter(Variable != "(Intercept)")
 
-# Custom ggplot dark theme matching the dashboard
-theme_shiny_dark <- function() {
+# Custom ggplot light theme matching the dashboard (klimadashboard-style)
+theme_shiny_light <- function() {
   theme_minimal(base_size = 14) +
     theme(
-      plot.background = element_rect(fill = "#1e293b", color = NA),
-      panel.background = element_rect(fill = "#1e293b", color = NA),
-      panel.grid.major = element_line(color = "#334155", linewidth = 0.5),
-      panel.grid.minor = element_line(color = "#1e293b", linewidth = 0.2),
-      text = element_text(color = "#f8fafc"),
-      axis.text = element_text(color = "#cbd5e1"),
-      axis.text.x = element_text(color = "#cbd5e1"),
-      axis.text.y = element_text(color = "#cbd5e1"),
-      axis.title = element_text(color = "#f8fafc", face = "bold"),
-      legend.background = element_rect(fill = "#1e293b", color = NA),
-      legend.text = element_text(color = "#cbd5e1"),
-      legend.title = element_text(color = "#f8fafc", face = "bold"),
-      plot.title = element_text(face = "bold", size = 15, color = "#f8fafc", margin = margin(b=10)),
-      plot.subtitle = element_text(color = "#cbd5e1", size = 11, margin = margin(b=15)),
-      strip.background = element_rect(fill = "#334155", color = NA),
-      strip.text = element_text(color = "#f8fafc", face = "bold")
+      plot.background = element_rect(fill = "white", color = NA),
+      panel.background = element_rect(fill = "white", color = NA),
+      panel.grid.major = element_line(color = "#e2e8f0", linewidth = 0.5),
+      panel.grid.minor = element_line(color = "#f1f5f9", linewidth = 0.3),
+      text = element_text(color = "#0f172a"),
+      axis.text = element_text(color = "#475569"),
+      axis.text.x = element_text(color = "#475569"),
+      axis.text.y = element_text(color = "#475569"),
+      axis.title = element_text(color = "#0f172a", face = "bold"),
+      legend.background = element_rect(fill = "white", color = NA),
+      legend.text = element_text(color = "#475569"),
+      legend.title = element_text(color = "#0f172a", face = "bold"),
+      plot.title = element_text(face = "bold", size = 15, color = "#0f172a", margin = margin(b=10)),
+      plot.subtitle = element_text(color = "#475569", size = 11, margin = margin(b=15)),
+      strip.background = element_rect(fill = "#e2e8f0", color = NA),
+      strip.text = element_text(color = "#0f172a", face = "bold")
     )
 }
 
@@ -96,14 +111,13 @@ theme_shiny_dark <- function() {
 
 app_theme <- bs_theme(
   version = 5,
-  bootswatch = "darkly",
-  bg = "#0f172a",
-  fg = "#f8fafc",
-  primary = "#0ea5e9", # Sky blue accent
-  secondary = "#475569",
-  success = "#10b981", # Emerald green
-  warning = "#f59e0b",
-  danger = "#ef4444",
+  bg = "#f1f5f9",       # Light slate background (klimadashboard style)
+  fg = "#0f172a",       # Dark slate text
+  primary = "#0284c7",  # Sky blue accent
+  secondary = "#64748b",
+  success = "#059669",  # Emerald green
+  warning = "#d97706",
+  danger = "#dc2626",
   base_font = font_google("Outfit"),
   heading_font = font_google("Outfit")
 )
@@ -115,56 +129,70 @@ ui <- page_navbar(
   # Custom CSS for modern premium styling (glassmorphism borders, card shadows, leaflet popup adjustments)
   header = tags$head(
     tags$style(HTML("
+      body { background-color: #f1f5f9; }
       .navbar {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
-        border-bottom: 1px solid #334155;
+        background: #ffffff !important;
+        border-bottom: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
       }
       .navbar .nav-link {
-        color: #94a3b8 !important;
+        color: #64748b !important;
         font-weight: 500;
         transition: color 0.2s ease-in-out;
         padding-bottom: 6px;
       }
       .navbar .nav-link:hover {
-        color: #0ea5e9 !important;
+        color: #0284c7 !important;
       }
       .navbar .nav-link.active {
-        color: #f8fafc !important;
-        border-bottom: 2px solid #0ea5e9;
+        color: #0f172a !important;
+        border-bottom: 2px solid #0284c7;
       }
       .navbar-brand {
-        color: #f8fafc !important;
+        color: #0f172a !important;
         font-weight: bold;
       }
       .card {
-        border: 1px solid #334155;
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        background-color: #1e293b !important;
+        box-shadow: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
+        background-color: #ffffff !important;
       }
       .card-header {
-        border-bottom: 1px solid #334155 !important;
+        border-bottom: 1px solid #e2e8f0 !important;
         font-weight: bold;
-        color: #f8fafc;
-        background-color: #1e293b !important;
+        color: #0f172a;
+        background-color: #ffffff !important;
       }
       .leaflet-popup-content-wrapper {
-        background: #1e293b;
-        color: #f8fafc;
-        border: 1px solid #334155;
+        background: #ffffff;
+        color: #0f172a;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
       }
       .leaflet-popup-tip {
-        background: #1e293b;
+        background: #ffffff;
       }
       .value-box {
-        border: 1px solid #334155;
+        border: 1px solid #e2e8f0;
       }
+      /* KPI cards with comparison sliders (Kreis profile) */
+      .kpi-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px 18px;
+        height: 100%;
+        box-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
+      }
+      .kpi-label { font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+      .kpi-value { font-size: 26px; font-weight: 700; color: #0f172a; line-height: 1.1; margin: 4px 0 2px 0; }
+      .kpi-unit { font-size: 12px; color: #94a3b8; }
       .control-panel {
-        background: #1e293b;
+        background: #ffffff;
         padding: 15px;
         border-radius: 8px;
-        border: 1px solid #334155;
+        border: 1px solid #e2e8f0;
       }
     "))
   ),
@@ -300,16 +328,42 @@ ui <- page_navbar(
         ")
       ),
       
+      # --- Kreis-Profil im klimadashboard-Stil ---
+      # (1) Steckbrief-Kopf mit Identität des Kreises
+      card(
+        card_header("Kreis-Profil"),
+        uiOutput("district_header_ui")
+      ),
+      # (2) KPI-Karten mit Einordnungs-Slidern (Position im Bundesvergleich)
+      uiOutput("kpi_cards_ui"),
+      # (3) Zeitverlauf + Flächennutzung nebeneinander
       layout_column_wrap(
-        width = 1,
+        width = 1/2,
         card(
-          card_header("Steckbrief des ausgewählten Landkreises"),
-          uiOutput("district_profile_ui")
+          card_header("Windleistung im Zeitverlauf"),
+          plotOutput("ts_plot", height = "300px")
         ),
         card(
-          card_header("Top 5 strukturell ähnlichste Peer-Landkreise (k-NN)"),
-          tableOutput("peer_table")
+          card_header("Flächennutzung"),
+          plotOutput("landuse_donut", height = "300px")
         )
+      ),
+      # (4) Performance (Soll/Ist) + Einordnung im Bundesvergleich
+      layout_column_wrap(
+        width = 1/2,
+        card(
+          card_header("Performance: mehr oder weniger Ausbau als erwartet"),
+          uiOutput("performance_ui")
+        ),
+        card(
+          card_header("Einordnung im Bundesvergleich"),
+          uiOutput("rank_ui")
+        )
+      ),
+      # (5) Strukturell ähnlichste Peer-Landkreise (k-NN) mit Ähnlichkeits-Balken
+      card(
+        card_header("Ähnlichste strukturelle Peer-Landkreise (k-NN)"),
+        uiOutput("peer_ui")
       )
     )
   ),
@@ -394,16 +448,16 @@ server <- function(input, output, session) {
     
     if (nrow(data_df) == 0) {
       return(ggplot() + 
-               annotate("text", x = 1, y = 1, label = "Keine Daten für diese Filterkombination verfügbar.", size = 6, color = "white") + 
-               theme_void() + 
-               theme(plot.background = element_rect(fill = "#1e293b", color = NA)))
+               annotate("text", x = 1, y = 1, label = "Keine Daten für diese Filterkombination verfügbar.", size = 6, color = "#475569") +
+               theme_void() +
+               theme(plot.background = element_rect(fill = "white", color = NA)))
     }
     
     if (input$selected_plot == "1") {
       # Plot 1: Bivariate Scatterplot
       ggplot(data_df, aes(x = Steuerkraft, y = Wind_Density_kW_km2)) +
         geom_point(aes(color = Performance_Class), alpha = 0.8, size = 3) +
-        geom_smooth(method = "lm", aes(fill = "Linear (OLS)"), color = "#38bdf8", size = 1.2, se = TRUE) +
+        geom_smooth(method = "lm", aes(fill = "Linear (OLS)"), color = "#0284c7", size = 1.2, se = TRUE) +
         geom_smooth(method = "loess", aes(fill = "Nicht-linear (LOESS)"), color = "#10b981", linetype = "dashed", size = 1.2, se = FALSE) +
         scale_color_manual(
           values = c("Normal" = "#64748b", "Outperformer (Hoch)" = "#10b981", "Underperformer (Tief)" = "#ef4444"),
@@ -419,7 +473,7 @@ server <- function(input, output, session) {
           x = "Steuereinnahmekraft (€ / Einwohner)",
           y = "Windkraft-Kapazitätsdichte (kW / km² Landfläche)"
         ) +
-        theme_shiny_dark()
+        theme_shiny_light()
         
     } else if (input$selected_plot == "2") {
       # Plot 2: Boxplots by Quartile
@@ -438,7 +492,7 @@ server <- function(input, output, session) {
         filter(!is.na(Steuerkraft_Quartil))
         
       ggplot(data_quartiles, aes(x = Steuerkraft_Quartil, y = Wind_Density_kW_km2)) +
-        geom_violin(fill = "#0284c7", color = "#38bdf8", alpha = 0.4) +
+        geom_violin(fill = "#0284c7", color = "#0284c7", alpha = 0.4) +
         geom_boxplot(width = 0.2, fill = "white", color = "#0f172a", outlier.size = 2.5, outlier.color = "#ef4444") +
         labs(
           title = "Windkraftdichte nach Steuerkraft-Quartilen",
@@ -446,7 +500,7 @@ server <- function(input, output, session) {
           x = "Steuereinnahmekraft-Klasse",
           y = "Windkraft-Kapazitätsdichte (kW / km²)"
         ) +
-        theme_shiny_dark()
+        theme_shiny_light()
         
     } else if (input$selected_plot == "3") {
       # Plot 3: Economic Structure Violin Plots
@@ -460,7 +514,7 @@ server <- function(input, output, session) {
           x = "Wirtschaftsstruktur-Typus",
           y = "Windkraft-Kapazitätsdichte (kW / km²)"
         ) +
-        theme_shiny_dark() +
+        theme_shiny_light() +
         theme(legend.position = "none")
         
     } else if (input$selected_plot == "4") {
@@ -484,7 +538,7 @@ server <- function(input, output, session) {
         
       ggplot(df_long, aes(x = Wert, y = Wind_Density_kW_km2)) +
         geom_point(alpha = 0.5, color = "#94a3b8", size = 1.5) +
-        geom_smooth(method = "lm", color = "#38bdf8", fill = "#0284c7", alpha = 0.15, size = 1) +
+        geom_smooth(method = "lm", color = "#0284c7", fill = "#0284c7", alpha = 0.15, size = 1) +
         facet_wrap(~ Variable_Clean, scales = "free_x") +
         labs(
           title = "Einfluss geografischer und demografischer Kontrollvariablen",
@@ -492,7 +546,7 @@ server <- function(input, output, session) {
           x = "Wert der Kontrollvariable",
           y = "Windkraft-Kapazitätsdichte (kW / km²)"
         ) +
-        theme_shiny_dark()
+        theme_shiny_light()
         
     } else if (input$selected_plot == "5") {
       # Plot 5: Top Outliers (Residuals, National)
@@ -521,7 +575,7 @@ server <- function(input, output, session) {
           x = "Landkreis",
           y = "Modellabweichung / Residuum (kW / km²)"
         ) +
-        theme_shiny_dark() +
+        theme_shiny_light() +
         theme(legend.position = "bottom")
         
     } else if (input$selected_plot == "6a") {
@@ -533,14 +587,14 @@ server <- function(input, output, session) {
       ggplot(diag_df, aes(x = Fitted, y = Residuals)) +
         geom_point(color = "#94a3b8", alpha = 0.6) +
         geom_hline(yintercept = 0, color = "#ef4444", linetype = "dashed", size = 1) +
-        geom_smooth(method = "loess", color = "#38bdf8", se = FALSE, size = 1.2) +
+        geom_smooth(method = "loess", color = "#0284c7", se = FALSE, size = 1.2) +
         labs(
           title = "Modellüberprüfung: Residuen vs. Vorhergesagte Werte",
           subtitle = "Die rote Line zeigt die Nulllinie, die blaue Linie den LOESS-Trend der Abweichungen.",
           x = "Vorhergesagter Wert (Fitted Values)",
           y = "Residuum (Abweichung)"
         ) +
-        theme_shiny_dark()
+        theme_shiny_light()
         
     } else if (input$selected_plot == "6b") {
       # Plot 6b: QQ plot
@@ -549,14 +603,14 @@ server <- function(input, output, session) {
       )
       ggplot(diag_df, aes(sample = Std_Residuals)) +
         stat_qq(color = "#94a3b8", alpha = 0.6) +
-        stat_qq_line(color = "#38bdf8", size = 1.2) +
+        stat_qq_line(color = "#0284c7", size = 1.2) +
         labs(
           title = "Modellüberprüfung: Normal-Q-Q-Plot der Residuen",
           subtitle = "Punkte sollten auf der blauen diagonalen Referenzlinie liegen.",
           x = "Theoretische Quantile",
           y = "Standardisierte Residuen"
         ) +
-        theme_shiny_dark()
+        theme_shiny_light()
     }
   })
   
@@ -649,13 +703,13 @@ server <- function(input, output, session) {
     ggplot(coef_plot_data, aes(x = reorder(Clean_Var, Estimate), y = Estimate)) +
       geom_hline(yintercept = 0, linetype = "dashed", color = "#ef4444", size = 0.8) +
       geom_errorbar(aes(ymin = Lower, ymax = Upper), width = 0.2, color = "#94a3b8", size = 1) +
-      geom_point(color = "#38bdf8", size = 4) +
+      geom_point(color = "#0284c7", size = 4) +
       coord_flip() +
       labs(
         x = "",
         y = "Effektstärke (in Standardabweichungen)"
       ) +
-      theme_shiny_dark()
+      theme_shiny_light()
   })
   
   output$coeff_table <- renderTable({
@@ -686,161 +740,281 @@ server <- function(input, output, session) {
       st_drop_geometry()
   })
   
-  output$district_profile_ui <- renderUI({
+  # German number formatter (thousands ".", decimal ",")
+  fmt_de <- function(x, digits = 0) {
+    formatC(round(x, digits), format = "f", digits = digits,
+            big.mark = ".", decimal.mark = ",")
+  }
+
+  # --- (1) Kreis-Steckbrief-Kopf: Identität des Kreises -----------------------
+  output$district_header_ui <- renderUI({
     req(selected_profile())
     prof <- selected_profile()
-    
-    # Compute percentile rank for Steuerkraft
-    tax_percentile <- round(mean(districts_sf$Steuerkraft <= prof$Steuerkraft) * 100)
-    # Compute percentile rank for Wind Density
-    wind_percentile <- round(mean(districts_sf$Wind_Density_kW_km2 <= prof$Wind_Density_kW_km2) * 100)
-    
-    # Define Quartiles based on current dataset values
-    cuts <- quantile(districts_sf$Steuerkraft, probs = c(0.25, 0.50, 0.75))
-    
-    q_info <- if (prof$Steuerkraft <= cuts[1]) {
-      list(label = "Q1: Finanzschwach (untere 25%)", color = "#ef4444")
-    } else if (prof$Steuerkraft <= cuts[2]) {
-      list(label = "Q2: Mittel-Unter (25% - 50%)", color = "#f59e0b")
-    } else if (prof$Steuerkraft <= cuts[3]) {
-      list(label = "Q3: Mittel-Ober (50% - 75%)", color = "#10b981")
-    } else {
-      list(label = "Q4: Finanzstark (obere 25%)", color = "#0ea5e9")
-    }
-    
-    # Color for wind percentile fill
-    wind_color <- if (wind_percentile <= 25) {
-      "#ef4444"
-    } else if (wind_percentile <= 50) {
-      "#f59e0b"
-    } else if (wind_percentile <= 75) {
-      "#10b981"
-    } else {
-      "#0ea5e9"
-    }
-    
-    # Helper to generate visual comparison bar
-    create_percentile_bar <- function(pct, fill_color) {
+    div(
+      style = "display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 28px;",
+      h3(prof$Landkreis_Label, style = "color:#0f172a; font-weight:700; margin:0;"),
+      span(prof$Bundesland, style = "color:#0284c7; font-weight:600;"),
+      span(paste0("Kreistyp: ", prof$BEZ), style = "color:#64748b;"),
+      span(paste0("Einwohner: ", fmt_de(prof$EWZ)), style = "color:#64748b;"),
+      span(paste0("Fläche: ", fmt_de(prof$KFL_km2, 0), " km²"), style = "color:#64748b;"),
+      span(paste0("Wirtschaftsstruktur: ", prof$Economic_Structure), style = "color:#64748b;")
+    )
+  })
+
+  # --- (2) KPI-Karten mit Einordnungs-Slider ----------------------------------
+  # Jede Karte zeigt den Kreiswert UND seine Position in der bundesweiten
+  # Verteilung (Min / Ø / Max + Marker), damit man die Zahl sofort einordnen kann.
+  output$kpi_cards_ui <- renderUI({
+    req(selected_profile())
+    prof <- selected_profile()
+
+    # Baustein: eine KPI-Karte mit Vergleichs-Slider
+    kpi_card <- function(label, value_txt, unit, val, dist, digits = 0,
+                         accent = "#0284c7") {
+      dmin <- min(dist, na.rm = TRUE); dmax <- max(dist, na.rm = TRUE)
+      dmean <- mean(dist, na.rm = TRUE)
+      rng <- if (dmax > dmin) dmax - dmin else 1
+      pos  <- max(0, min(100, (val - dmin) / rng * 100))
+      mpos <- max(0, min(100, (dmean - dmin) / rng * 100))
       div(
-        style = "position: relative; height: 10px; background: #334155; border-radius: 5px; margin-top: 18px; margin-bottom: 8px; width: 100%;",
+        class = "kpi-card",
+        div(class = "kpi-label", label),
+        div(class = "kpi-value", value_txt),
+        div(class = "kpi-unit", unit),
+        # Slider-Spur mit Ø-Tick und Kreis-Marker
         div(
-          style = sprintf("height: 100%%; width: %d%%; background: %s; border-radius: 5px; transition: width 0.5s ease-in-out;", pct, fill_color)
+          style = "position:relative; height:26px; margin-top:14px;",
+          div(style = "position:absolute; top:12px; left:0; right:0; height:6px; background:#e2e8f0; border-radius:3px;"),
+          div(style = sprintf("position:absolute; top:6px; left:%.1f%%; width:2px; height:18px; background:#94a3b8;", mpos)),
+          div(style = sprintf("position:absolute; top:0px; left:%.1f%%; transform:translateX(-50%%); width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:9px solid %s;", pos, accent)),
+          div(style = sprintf("position:absolute; top:9px; left:%.1f%%; transform:translateX(-50%%); width:8px;height:8px;border-radius:50%%;background:%s;", pos, accent))
         ),
-        # Median line marker (at 50%)
+        # Min / Ø / Max Beschriftung
         div(
-          style = "position: absolute; left: 50%; top: -3px; height: 16px; width: 2px; background: #cbd5e1; z-index: 10;"
-        ),
-        # Median label
-        div(
-          style = "position: absolute; left: 50%; top: -16px; transform: translateX(-50%); font-size: 9px; color: #cbd5e1; font-weight: bold;",
-          "Median (50%)"
+          style = "position:relative; height:14px; font-size:10px; color:#94a3b8;",
+          span(style = "position:absolute; left:0;", fmt_de(dmin, digits)),
+          span(style = sprintf("position:absolute; left:%.1f%%; transform:translateX(-50%%); color:#64748b;", mpos), paste0("Ø ", fmt_de(dmean, digits))),
+          span(style = "position:absolute; right:0;", fmt_de(dmax, digits))
         )
       )
     }
-    
-    fluidRow(
-      column(
-        width = 6,
-        h4(prof$Landkreis_Label, style = "color: #38bdf8; font-weight: bold; margin-bottom: 15px;"),
-        p(strong("Bundesland: "), prof$Bundesland),
-        p(strong("Einwohnerzahl: "), format(prof$EWZ, big.mark = ".")),
-        p(strong("Fläche: "), round(prof$KFL_km2, 1), " km²"),
-        p(strong("Wirtschaftsstruktur: "), prof$Economic_Structure),
-        hr(style = "border-color: #334155;"),
-        
-        # Didactic Steuerkraft block
-        p(
-          strong("Steuereinnahmekraft: "), 
-          format(round(prof$Steuerkraft), big.mark = "."), " € / Einwohner",
-          br(),
-          span(q_info$label, style = sprintf("background-color: %s; color: #0f172a; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-top: 4px; display: inline-block;", q_info$color)),
-          span(sprintf(" (Reicher als %d%% aller Landkreise)", tax_percentile), style = "font-size: 12px; color: #94a3b8; margin-left: 5px;")
-        ),
-        create_percentile_bar(tax_percentile, q_info$color)
-      ),
-      column(
-        width = 6,
-        h5("Windenergie-Kennzahlen", style = "font-weight: bold; margin-bottom: 15px;"),
-        p(strong("Installierte Windleistung: "), format(round(prof$Total_Nettoleistung_kW), big.mark = "."), " kW"),
-        p(strong("Windkraftanlagen: "), prof$Turbine_Count, " Turbinen"),
-        
-        # Didactic Windkraft-Dichte block
-        p(
-          strong("Windkraft-Dichte (Ist): "), round(prof$Wind_Density_kW_km2, 2), " kW/km²",
-          br(),
-          span(sprintf("Mehr Ausbau als %d%% aller Landkreise", wind_percentile), style = "font-size: 12px; color: #94a3b8;")
-        ),
-        create_percentile_bar(wind_percentile, wind_color),
-        
-        hr(style = "border-color: #334155;"),
-        p(strong("Windkraft-Dichte (Soll/Modell): "), round(prof$Predicted_Wind_Density, 2), " kW/km²"),
-        p(strong("Statistische Abweichung: "), 
-          span(paste0(ifelse(prof$Residuals > 0, "+", ""), round(prof$Residuals, 2), " kW/km²"),
-               style = paste0("font-weight: bold; color: ", ifelse(prof$Residuals > 0, "#10b981", "#ef4444"), ";")),
-          br(),
-          strong("Performance-Klasse: "),
-          span(prof$Performance_Class, 
-               style = paste0("font-weight: bold; color: ", 
-                              ifelse(prof$Performance_Class == "Outperformer (Hoch)", "#10b981", 
-                              ifelse(prof$Performance_Class == "Underperformer (Tief)", "#ef4444", "#94a3b8")), ";"))
-        )
+
+    cards <- list(
+      kpi_card("Installierte Windleistung",
+               paste0(fmt_de(prof$Total_Nettoleistung_kW / 1000), " MW"),
+               paste0(fmt_de(prof$Wind_Density_kW_km2), " kW/km²"),
+               prof$Total_Nettoleistung_kW / 1000,
+               districts_sf$Total_Nettoleistung_kW / 1000),
+      kpi_card("Steuereinnahmekraft",
+               paste0(fmt_de(prof$Steuerkraft), " €"),
+               "je Einwohner",
+               prof$Steuerkraft, districts_sf$Steuerkraft),
+      kpi_card("Ø Windgeschwindigkeit",
+               paste0(fmt_de(prof$Windgeschwindigkeit_ms, 1), " m/s"),
+               "auf 150 m Höhe",
+               prof$Windgeschwindigkeit_ms, districts_sf$Windgeschwindigkeit_ms,
+               digits = 1),
+      kpi_card("Bevölkerungsdichte",
+               fmt_de(prof$Einwohnerdichte),
+               "Einwohner/km²",
+               prof$Einwohnerdichte, districts_sf$Einwohnerdichte),
+      kpi_card("Flächenanteil Landwirtschaft",
+               paste0(fmt_de(prof$Landwirtschaft_Prozent), " %"),
+               "der Kreisfläche",
+               prof$Landwirtschaft_Prozent, districts_sf$Landwirtschaft_Prozent)
+    )
+
+    div(
+      style = "display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:12px; margin:4px 0 6px 0;",
+      cards
+    )
+  })
+
+  # --- (3a) Zeitverlauf der installierten Windleistung ------------------------
+  output$ts_plot <- renderPlot({
+    req(input$selected_district)
+    d <- wind_ts %>%
+      filter(AGS == input$selected_district, Jahr >= 2000) %>%
+      mutate(MW = Nettoleistung_kW_kumuliert / 1000)
+
+    ggplot(d, aes(x = Jahr, y = MW)) +
+      geom_area(fill = "#bae6fd", alpha = 0.5) +
+      geom_line(color = "#0284c7", linewidth = 1.2) +
+      geom_point(color = "#0284c7", size = 2) +
+      labs(x = NULL, y = "Installierte Leistung (MW)",
+           subtitle = "Kumulierter Ausbaustand zum Jahresende") +
+      theme_shiny_light()
+  }, bg = "white")
+
+  # --- (3b) Flächennutzung als Donut ------------------------------------------
+  output$landuse_donut <- renderPlot({
+    req(selected_profile())
+    prof <- selected_profile()
+    kat <- c("Landwirtschaft", "Wald", "Siedlung/Verkehr", "Wasser", "Sonstige")
+    val <- c(prof$Landwirtschaft_Prozent, prof$Waldflaeche_Prozent,
+             prof$Siedlung_Verkehr_Prozent, prof$Wasser_Prozent, prof$Sonstige_Prozent)
+    dd <- tibble(Kategorie = factor(kat, levels = kat), Anteil = val)
+    cols <- c("Landwirtschaft" = "#84cc16", "Wald" = "#15803d",
+              "Siedlung/Verkehr" = "#f59e0b", "Wasser" = "#0ea5e9",
+              "Sonstige" = "#94a3b8")
+
+    ggplot(dd, aes(x = 2, y = Anteil, fill = Kategorie)) +
+      geom_col(width = 1, color = "white", linewidth = 0.6) +
+      coord_polar(theta = "y") +
+      xlim(0.4, 2.5) +
+      scale_fill_manual(
+        values = cols, name = NULL,
+        labels = paste0(kat, "  ", fmt_de(val), " %")
+      ) +
+      theme_void(base_size = 13) +
+      theme(
+        legend.position = "right",
+        legend.text = element_text(color = "#475569"),
+        plot.background = element_rect(fill = "white", color = NA)
+      )
+  }, bg = "white")
+
+  # --- (4a) Performance: Soll (Modell) vs. Ist (tatsächlich) ------------------
+  output$performance_ui <- renderUI({
+    req(selected_profile())
+    prof <- selected_profile()
+    soll <- prof$Predicted_Wind_Density
+    ist  <- prof$Wind_Density_kW_km2
+    resid <- prof$Residuals
+    pos_col <- "#059669"; neg_col <- "#dc2626"
+    main_col <- if (resid >= 0) pos_col else neg_col
+
+    # Prozentuale Abweichung nur sinnvoll, wenn Soll positiv ist
+    pct_txt <- if (!is.na(soll) && soll > 0) {
+      sprintf("%+d %%", round((ist - soll) / soll * 100))
+    } else {
+      sprintf("%+s kW/km²", fmt_de(resid, 1))
+    }
+
+    # Gemeinsame Skala für die zwei Mini-Balken (negative Werte auf 0 begrenzt)
+    scale_max <- max(soll, ist, 1, na.rm = TRUE)
+    bar <- function(label, value, color) {
+      w <- max(0, min(100, value / scale_max * 100))
+      div(
+        style = "margin-bottom:10px;",
+        div(style = "font-size:12px; color:#64748b;", label,
+            span(paste0(fmt_de(value, 1), " kW/km²"),
+                 style = "float:right; color:#0f172a; font-weight:600;")),
+        div(style = "height:10px; background:#e2e8f0; border-radius:5px; margin-top:4px;",
+            div(style = sprintf("height:100%%; width:%.1f%%; background:%s; border-radius:5px;", w, color)))
+      )
+    }
+
+    div(
+      div(style = sprintf("font-size:34px; font-weight:700; color:%s; line-height:1;", main_col), pct_txt),
+      div(style = "font-size:12px; color:#94a3b8; margin-bottom:14px;",
+          "Abweichung vom statistisch erwarteten Ausbau"),
+      bar("Erwartet (Soll, Modell)", max(soll, 0), "#94a3b8"),
+      bar("Tatsächlich (Ist)", max(ist, 0), "#0284c7"),
+      div(
+        style = "margin-top:8px;",
+        strong("Performance-Klasse: "),
+        span(prof$Performance_Class,
+             style = sprintf("font-weight:700; color:%s;",
+               if (prof$Performance_Class == "Outperformer (Hoch)") pos_col
+               else if (prof$Performance_Class == "Underperformer (Tief)") neg_col
+               else "#64748b"))
       )
     )
   })
-  
-  output$peer_table <- renderTable({
+
+  # --- (4b) Einordnung im Bundesvergleich (Rang nach Windkraft-Dichte) --------
+  output$rank_ui <- renderUI({
+    req(selected_profile())
+    prof <- selected_profile()
+    N <- nrow(districts_sf)
+    ranks <- rank(-districts_sf$Wind_Density_kW_km2, ties.method = "min")
+    r <- ranks[match(prof$AGS, districts_sf$AGS)]
+    # Rang 1 (höchste Dichte) -> Marker rechts
+    pos <- (1 - (r - 1) / (N - 1)) * 100
+
+    div(
+      div(style = "font-size:13px; color:#64748b; margin-bottom:2px;",
+          "Position nach Windkraft-Dichte (kW/km²)"),
+      div(style = "font-size:30px; font-weight:700; color:#0f172a;",
+          paste0("Rang ", r), span(paste0(" von ", N), style = "font-size:16px; color:#94a3b8; font-weight:500;")),
+      # Band mit Marker
+      div(
+        style = "position:relative; height:30px; margin-top:18px;",
+        div(style = "position:absolute; top:11px; left:0; right:0; height:8px; background:linear-gradient(90deg,#e2e8f0,#bae6fd); border-radius:4px;"),
+        div(style = sprintf("position:absolute; top:4px; left:%.1f%%; transform:translateX(-50%%); width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:11px solid #0284c7;", pos))
+      ),
+      div(style = "position:relative; height:14px; font-size:10px; color:#94a3b8;",
+          span(style = "position:absolute; left:0;", paste0("Rang ", N, " (wenig)")),
+          span(style = "position:absolute; right:0;", "Rang 1 (viel)"))
+    )
+  })
+
+  # --- (5) k-NN Peer-Landkreise mit Ähnlichkeits-Balken -----------------------
+  output$peer_ui <- renderUI({
     req(input$selected_district)
-    
+
     knn_data <- districts_sf %>%
       st_drop_geometry() %>%
-      select(AGS, Einwohnerdichte, Waldflaeche_Prozent, Landwirtschaft_Prozent, Beschaeftigte_Sekundar, Beschaeftigte_Primar)
-    
-    scaled_matrix <- scale(knn_data %>% select(-AGS))
-    scaled_df <- as.data.frame(scaled_matrix)
+      select(AGS, Einwohnerdichte, Waldflaeche_Prozent, Landwirtschaft_Prozent,
+             Beschaeftigte_Sekundar, Beschaeftigte_Primar)
+
+    scaled_df <- as.data.frame(scale(knn_data %>% select(-AGS)))
     scaled_df$AGS <- knn_data$AGS
-    
-    target_values <- scaled_df %>%
-      filter(AGS == input$selected_district) %>%
-      select(-AGS) %>%
-      as.numeric()
-    
+
+    target <- scaled_df %>% filter(AGS == input$selected_district) %>%
+      select(-AGS) %>% as.numeric()
     scaled_df$Distance <- apply(scaled_df %>% select(-AGS), 1, function(row) {
-      sqrt(sum((row - target_values)^2, na.rm = TRUE))
+      sqrt(sum((row - target)^2, na.rm = TRUE))
     })
-    
-    top_peers <- scaled_df %>%
+
+    peers <- scaled_df %>%
       filter(AGS != input$selected_district) %>%
-      arrange(Distance) %>%
-      slice_head(n = 5) %>%
-      select(AGS, Distance)
-    
-    peer_stats <- top_peers %>%
-      left_join(districts_sf %>% st_drop_geometry(), by = "AGS") %>%
-      select(
-        Landkreis = Landkreis_Label,
-        Bundesland,
-        `Steuerkraft (€/Ew)` = Steuerkraft,
-        `Nettoleistung (kW)` = Total_Nettoleistung_kW,
-        `Dichte (kW/km²)` = Wind_Density_kW_km2,
-        `Modell-Klasse` = Performance_Class,
-        `Abstand` = Distance
-      ) %>%
-      mutate(
-        `Steuerkraft (€/Ew)` = round(`Steuerkraft (€/Ew)`),
-        `Nettoleistung (kW)` = format(`Nettoleistung (kW)`, big.mark = "."),
-        `Dichte (kW/km²)` = round(`Dichte (kW/km²)`, 2),
-        `Abstand` = round(`Abstand`, 3)
+      arrange(Distance) %>% slice_head(n = 5) %>%
+      left_join(districts_sf %>% st_drop_geometry(), by = "AGS")
+
+    # Ähnlichkeits-Balken: kleinerer Abstand = ähnlicher = längerer Balken
+    dmax <- max(peers$Distance)
+    peers <- peers %>% mutate(sim_pct = (1 - Distance / (dmax * 1.15)) * 100)
+
+    header <- tags$tr(
+      lapply(c("Rang", "Landkreis", "Bundesland", "Ähnlichkeit (kleiner = ähnlicher)",
+               "Dichte (kW/km²)", "Steuerkraft (€/Ew.)", "Klasse"),
+             function(h) tags$th(h, style = "text-align:left; padding:8px 10px; font-size:12px; color:#64748b; border-bottom:1px solid #e2e8f0;"))
+    )
+
+    rows <- lapply(seq_len(nrow(peers)), function(i) {
+      p <- peers[i, ]
+      tags$tr(
+        tags$td(i, style = "padding:8px 10px; color:#94a3b8; font-weight:600;"),
+        tags$td(p$Landkreis_Label, style = "padding:8px 10px; color:#0f172a; font-weight:600;"),
+        tags$td(p$Bundesland, style = "padding:8px 10px; color:#64748b;"),
+        tags$td(
+          style = "padding:8px 10px; min-width:160px;",
+          div(style = "display:flex; align-items:center; gap:8px;",
+              span(fmt_de(p$Distance, 2), style = "color:#475569; width:34px;"),
+              div(style = "flex:1; height:8px; background:#e2e8f0; border-radius:4px;",
+                  div(style = sprintf("height:100%%; width:%.1f%%; background:#0284c7; border-radius:4px;", p$sim_pct))))
+        ),
+        tags$td(fmt_de(p$Wind_Density_kW_km2), style = "padding:8px 10px; color:#0f172a;"),
+        tags$td(fmt_de(p$Steuerkraft), style = "padding:8px 10px; color:#0f172a;"),
+        tags$td(p$Performance_Class, style = "padding:8px 10px; color:#64748b; font-size:12px;")
       )
-    
-    peer_stats
-  }, striped = TRUE, spacing = "m", align = "l")
+    })
+
+    tagList(
+      tags$table(style = "width:100%; border-collapse:collapse;", header, rows),
+      div(style = "font-size:11px; color:#94a3b8; margin-top:10px;",
+          "Ähnlichkeit basiert auf strukturellen Merkmalen (Einwohnerdichte, Wald- & Landwirtschaftsfläche, Beschäftigtenstruktur). Keine Aussage über Performance.")
+    )
+  })
   
   # ----------------------------------------------------------------------------
   # RENDER TAB 4: LEAFLET MAP
   # ----------------------------------------------------------------------------
   output$map <- renderLeaflet({
     leaflet() %>%
-      addProviderTiles(providers$CartoDB.DarkMatter) %>%
+      addProviderTiles(providers$CartoDB.Positron) %>%
       setView(lng = 10.4515, lat = 51.1657, zoom = 6)
   })
   
