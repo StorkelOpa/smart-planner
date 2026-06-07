@@ -1,0 +1,14 @@
+# Ignore large datasets and zips
+^Gesamtdatenexport_20240101_23\.1.*
+^data/vg250_2023.*
+^data/wind_turbines\.csv
+^data/vg250_2023\.zip
+
+# Ignore temporary and system files
+^\.git/
+^\.Rhistory
+^\.Rproj\.user/
+^\.Ruserdata/
+
+# Ignore report plots
+^plots/

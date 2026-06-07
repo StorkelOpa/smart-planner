@@ -1,0 +1,10 @@
+name: smart-planner
+title:
+username: btu-smart-planner-bkv
+account: btu-smart-planner-bkv
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17429853
+bundleId: 12048565
+url: https://btu-smart-planner-bkv.shinyapps.io/smart-planner/
+version: 1
