@@ -1,9 +1,14 @@
-# Large MStR data exports
-Gesamtdatenexport_20240101_23.1*
+# Rohdaten (gross, extern beziehbar - siehe docs/00_datenquellen.md)
+data_raw/
 
-# Geographic raw data zip & folder
+# Generierte Zwischen-/Enddateien (durch run_pipeline.sh neu erzeugbar)
 data/vg250_2023/
-data/vg250_2023.zip
+data/*.csv
+data/*.gpkg
+data/*.RData
+
+# Generierte Report-Grafiken (durch scripts/07_generate_plots.R neu erzeugbar)
+plots/
 
 # R environment & history files
 .Rhistory
@@ -13,17 +18,3 @@ data/vg250_2023.zip
 
 # Logs
 *.log
-
-# Generated data files (recreated by running scripts/run_data_pipeline.sh)
-data/wind_turbines.csv
-data/wind_capacity_by_county.csv
-data/data_metadata_inkar.csv
-data/smart_planner_final_data.csv
-data/smart_planner_final_data.gpkg
-data/smart_planner_final_data_with_residuals.csv
-data/smart_planner_final_data_with_residuals.gpkg
-data/model_results.RData
-
-# Generated scientific plots
-plots/
-
